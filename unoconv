@@ -524,6 +524,7 @@ class Options:
         self.template = None
         self.timeout = 6
         self.verbose = 0
+        self.verifypagecounts = False
 
         ### Get options from the commandline
         try:
@@ -531,7 +532,7 @@ class Options:
                 ['connection=', 'debug', 'doctype=', 'export=', 'format=',
                  'help', 'import', 'listener', 'no-launch', 'output=',
                  'outputpath', 'password=', 'pipe=', 'port=', 'server=',
-                 'timeout=', 'show', 'stdout', 'template', 'verbose',
+                 'timeout=', 'show', 'stdout', 'template', 'verbose', 'verifypagecounts',
                  'version'] )
         except getopt.error as exc:
             print('unoconv: %s, try unoconv -h for a list of all the options' % str(exc))
@@ -612,10 +613,12 @@ class Options:
                 self.timeout = int(arg)
             elif opt in ['-v', '--verbose']:
                 self.verbose = self.verbose + 1
+            elif opt in ['--verifypagecounts']:
+                self.verifypagecounts = True
             elif opt in ['-V', '--version']:
                 self.version()
                 sys.exit(255)
-
+        
         ### Enable verbosity
         if self.verbose >= 2:
             print('Verbosity set to level %d' % self.verbose, file=sys.stderr)
@@ -703,6 +706,7 @@ unoconv options:
   -t, --template=file      import the styles from template (.ott)
   -T, --timeout=secs       timeout after secs if connection to listener fails
   -v, --verbose            be more and more verbose (-vvv for debugging)
+      --verifypagecounts   warn if the output page count doesn't match the input file page count
 ''', file=sys.stderr)
 
 class Convertor:
@@ -850,6 +854,10 @@ class Convertor:
             if not document:
                 raise UnoException("The document '%s' could not be opened." % inputurl, None)
 
+            if op.verifypagecounts:
+                inputpagecount = document.CurrentController.PageCount
+                info(1, "Input File Page Count: %s" % inputpagecount)
+
             ### Import style template
             phase = "import-style"
             if op.template:
@@ -936,9 +944,21 @@ class Convertor:
             except IOException as e:
                 raise UnoException("Unable to store document to %s (ErrCode %d)\n\nProperties: %s" % (outputurl, e.ErrCode, outputprops), None)
 
+            if op.verifypagecounts:
+                verifyDocument = self.desktop.loadComponentFromURL( outputurl , "_blank", 0, outputprops )
+
+                outputpagecount = verifyDocument.CurrentController.PageCount
+                info(1, "Output File Page Count: %s" % outputpagecount)
+
+                if (inputpagecount != outputpagecount):
+                   raise UnoException("Probable conversion error - Input File has %s pages/Output File %s pages\n\nProperties: %s" % (inputpagecount, outputpagecount, outputprops), None)
+
             phase = "dispose"
             document.dispose()
             document.close(True)
+            if op.verifypagecounts:
+                verifyDocument.dispose()
+                verifyDocument.close(True)
 
         except SystemError as e:
             error("unoconv: SystemError during %s phase:\n%s" % (phase, e))
