@@ -944,22 +944,27 @@ class Convertor:
             except IOException as e:
                 raise UnoException("Unable to store document to %s (ErrCode %d)\n\nProperties: %s" % (outputurl, e.ErrCode, outputprops), None)
 
-            if op.verifypagecounts:
-                verifyDocument = self.desktop.loadComponentFromURL( outputurl , "_blank", 0, outputprops )
-
-                outputpagecount = verifyDocument.CurrentController.PageCount
-                info(1, "Output File Page Count: %s" % outputpagecount)
-
-                if (inputpagecount != outputpagecount):
-                   raise UnoException("Probable conversion error - Input File has %s pages/Output File %s pages\n\nProperties: %s" % (inputpagecount, outputpagecount, outputprops), None)
-
             phase = "dispose"
             document.dispose()
             document.close(True)
-            if op.verifypagecounts:
-                verifyDocument.dispose()
-                verifyDocument.close(True)
 
+            if op.verifypagecounts:
+                phase = "verify"
+                verifyDocument = self.desktop.loadComponentFromURL( outputurl , "_blank", 0, outputprops )
+
+                if verifyDocument:
+                     outputpagecount = verifyDocument.CurrentController.PageCount
+                
+                     info(1, "Output File Page Count: %s" % outputpagecount)
+
+                     if (inputpagecount != outputpagecount):
+                         raise UnoException("Probable conversion error - Input File has %s pages/Output File %s pages\n\nProperties: %s" % (inputpagecount, outputpagecount, outputprops), None)
+
+                     verifyDocument.dispose()
+                     verifyDocument.close(True)
+                else:
+                     info(1, "Unable to verify output page count")
+                
         except SystemError as e:
             error("unoconv: SystemError during %s phase:\n%s" % (phase, e))
             exitcode = 1
