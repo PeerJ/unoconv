@@ -523,6 +523,7 @@ class Options:
         self.stdout = False
         self.template = None
         self.timeout = 6
+        self.transformer = False
         self.verbose = 0
 
         ### Get options from the commandline
@@ -531,7 +532,7 @@ class Options:
                 ['connection=', 'debug', 'doctype=', 'export=', 'format=',
                  'help', 'import', 'listener', 'no-launch', 'output=',
                  'outputpath', 'password=', 'pipe=', 'port=', 'server=',
-                 'timeout=', 'show', 'stdout', 'template', 'verbose',
+                 'timeout=', 'show', 'stdout', 'template', 'transformer', 'verbose',
                  'version'] )
         except getopt.error as exc:
             print('unoconv: %s, try unoconv -h for a list of all the options' % str(exc))
@@ -610,6 +611,8 @@ class Options:
                 self.template = arg
             elif opt in ['-T', '--timeout']:
                 self.timeout = int(arg)
+            elif opt in ['--transformer']:
+                self.transformer = True
             elif opt in ['-v', '--verbose']:
                 self.verbose = self.verbose + 1
             elif opt in ['-V', '--version']:
@@ -702,17 +705,62 @@ unoconv options:
       --stdout             write output to stdout
   -t, --template=file      import the styles from template (.ott)
   -T, --timeout=secs       timeout after secs if connection to listener fails
+      --transformer        use transformer
   -v, --verbose            be more and more verbose (-vvv for debugging)
 ''', file=sys.stderr)
 
 class Transformer:
      def transform(self, document):
-          pass
+            #cursor = document.Text.createTextCursor()
+            # we want a consistent header/footer for all docs
+            pageStyles = document.StyleFamilies.getByName("PageStyles")
+            defaultStyle = pageStyles.getByName("Default Style")
+            defaultStyle.HeaderIsOn = False
+            defaultStyle.FooterIsOn = True
+            
+            defaultStyle.Width=215.9 * 100 # in 100th mm (us letter)
+            defaultStyle.Height=279.4 * 100 # in 100th mm (us letter)
+            defaultStyle.TopMargin = 20 * 100 # in 100th mm (2cm)
+            defaultStyle.LeftMargin = 20 * 100 # in 100th mm (2cm)
+            defaultStyle.RightMargin = 20 * 100 # in 100th mm (2cm)
+            defaultStyle.BottomMargin = 20 * 100 # in 100th mm (2cm)
+            
+            defaultStyle.FooterHeight = 10 * 100 # in 100th mm (1cm)
+                        
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/textfield/PageNumber.html
+            # http://comments.gmane.org/gmane.comp.openoffice.devel.udk/1693
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/NumberingType.html#ARABIC
+            pageNumber = document.createInstance("com.sun.star.text.textfield.PageNumber")            
+            pageNumber.NumberingType = 4
+            pageNumber.SubType = 1
+            footerCursor = defaultStyle.FooterText.createTextCursor()
+            defaultStyle.FooterText.Text.insertTextContent(footerCursor, pageNumber, True)
+            footerCursor.ParaAdjust = 3 # CENTER
+            footerCursor.ParaLineNumberCount = False
 
+            # turn on line numbering
+            document.LineNumberingProperties.IsOn = True
+
+            #paragraphStyles = document.StyleFamilies.getByName("ParagraphStyles");
+            #defaultStyle = paragraphStyles.getByName("Default Style");
+            #
+            #print ();
+            #cursor = document.Text.createTextCursor();
+            #print (cursor.getPageStyle);
+            #print (page.Header);
+            # 
+            #print (page.PageProperties.LeftMargin);
+            #PageProperites.HeaderIsOn = False;
+            #document.PageProperites.FooterIsOn = False;
+
+            return
+          
 class Convertor:
-    def __init__(self):
-        global exitcode, ooproc, office, product
+    def __init__(self, transformer):
+        global exitcode, ooproc, office, product, transfomer
         unocontext = None
+
+        self.transformer = transformer
 
         ### Do the LibreOffice component dance
         self.context = uno.getComponentContext()
@@ -867,46 +915,9 @@ class Convertor:
                     print('unoconv: template file `%s\' does not exist.' % op.template, file=sys.stderr)
                     exitcode = 1
 
-            #cursor = document.Text.createTextCursor()
-            # we want a consistent header/footer for all docs
-            pageStyles = document.StyleFamilies.getByName("PageStyles")
-            defaultStyle = pageStyles.getByName("Default Style")
-            defaultStyle.HeaderIsOn = False
-            defaultStyle.FooterIsOn = True
-            
-            defaultStyle.Width=215.9 * 100 # in 100th mm (us letter)
-            defaultStyle.Height=279.4 * 100 # in 100th mm (us letter)
-            defaultStyle.TopMargin = 20 * 100 # in 100th mm (2cm)
-            defaultStyle.LeftMargin = 20 * 100 # in 100th mm (2cm)
-            defaultStyle.RightMargin = 20 * 100 # in 100th mm (2cm)
-            defaultStyle.BottomMargin = 20 * 100 # in 100th mm (2cm)
-            
-            defaultStyle.FooterHeight = 10 * 100 # in 100th mm (1cm)
-                        
-            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/textfield/PageNumber.html
-            # http://comments.gmane.org/gmane.comp.openoffice.devel.udk/1693
-            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/NumberingType.html#ARABIC
-            pageNumber = document.createInstance("com.sun.star.text.textfield.PageNumber")            
-            pageNumber.NumberingType = 4
-            pageNumber.SubType = 1
-            footerCursor = defaulttyle.FooterText.createTextCursor()
-            defaultStyle.FooterText.Text.insertTextContent(footerCursor, pageNumber, True)
-            footerCursor.ParaAdjust = 3 # CENTER
-
-            # turn on line numbering
-            document.LineNumberingProperties.IsOn
-
-            #paragraphStyles = document.StyleFamilies.getByName("ParagraphStyles");
-            #defaultStyle = paragraphStyles.getByName("Default Style");
-            #
-            #print ();
-            #cursor = document.Text.createTextCursor();
-            #print (cursor.getPageStyle);
-            #print (page.Header);
-            # 
-            #print (page.PageProperties.LeftMargin);
-            #PageProperites.HeaderIsOn = False;
-            #document.PageProperites.FooterIsOn = False;
+            phase = "transform"
+            if op.transformer:
+               self.transformer.transform(document)
 
             ### Update document links
             phase = "update-links"
