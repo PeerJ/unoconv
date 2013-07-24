@@ -764,7 +764,14 @@ class Transformer:
 
      def lineNumbering(self, on):
           print ("Setting Line Numbering for document")
-          self.document.LineNumberingProperties.IsOn = on
+          self.document.LineNumberingProperties.IsOn = True
+          
+          # make sure we're always consistent with the numbering
+          self.document.LineNumberingProperties.Interval = 1
+          self.document.LineNumberingProperties.CountEmptyLines = False
+          self.document.LineNumberingProperties.NumberPosition = 0 # left
+          self.document.LineNumberingProperties.NumberingType = 4 # arabic
+          self.document.LineNumberingProperties.RestartAtEachPage = False
           return
      
      def removeHeaderFooterLineNumbering(self):
@@ -828,49 +835,29 @@ class Transformer:
             return
           
      def comments(self):
-     
-            #footer.ParaLineNumberCount = False
-            #for i in range(0, paragraphStyles.getCount() - 1):
-               #paragraphStyle = paragraphStyles.getByIndex(i)
-               #print (paragraphStyle.DisplayName)
-               #if paragraphStyle.IsPhysical:
-                    #paragraphStyle.HeaderIsOn = False
-                    #paragraphStyle.FooterIsOn = False
+            # List of Style Families
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/StyleFamilies.html
             
-            #defaultStyle = pageStyles.getByName("Default Style")
-            #defaultStyle.FooterHeight = 10 * 100 # in 100th mm (1cm)
-                        
-            #pageStyle.FooterText.Text.removeTextContent(pageNumber)
-            #pageStyle.FooterTextLeft.Text.removeTextContent(pageNumber)
-                    #pageStyle.FooterTextRight.Text.removeTextContent(pageNumber)
-            #footerCursor = defaultStyle.FooterText.createTextCursor()
-            #footerCursor.ParaLineNumberCount = False
-            #footerCursor.ParaAdjust = 3 # CENTER
-            #cursor = document.Text.createTextCursor()
+            # Style Properties & Methods
+            # http://wiki.openoffice.org/wiki/Documentation/DevGuide/Text/Overall_Document_Features#Styles
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/Style.html#ParaStyleConditions
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/container/XIndexAccess.html
             
-            #defaultStyle.FooterText.Text.insertTextContent(footerCursor, pageNumber, True)
-          
-
-            #pageNumber = document.createInstance("com.sun.star.text.textfield.PageNumber")            
-            #pageNumber.NumberingType = 4
-            #pageNumber.SubType = 1
-            #footerCursor.gotoStartOfParagraph(False)
-            #footerCursor.gotoEndOfParagraph(True)
-            #print(footerCursor.getString())
-            #footerCursor.setString("")
-            #defaultStyle.FooterText.Text.insertTextContent(footerCursor, '', True)
-            #paragraphStyles = document.StyleFamilies.getByName("ParagraphStyles");
-            #defaultStyle = paragraphStyles.getByName("Default Style");
-            #
-            #print ();
-            #cursor = document.Text.createTextCursor();
-            #print (cursor.getPageStyle);
-            #print (page.Header);
-            # 
-            #print (page.PageProperties.LeftMargin);
-            #PageProperites.HeaderIsOn = False;
-            #document.PageProperites.FooterIsOn = False;
-
+            # Page Properties
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/PageProperties.html
+            
+            # Paragraph Properties
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/ParagraphProperties.html
+            
+            # Cursor methods
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/XText.html
+            
+            # Document properties
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/module-ix.html
+            
+            # Line Numbering properties
+            # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/LineNumberingProperties.html
+            
             return
           
 class Convertor:
