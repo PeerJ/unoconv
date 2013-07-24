@@ -711,7 +711,7 @@ unoconv options:
 
 class Convertor:
     def __init__(self):
-        global exitcode, ooproc, office, product, transfomer
+        global exitcode, ooproc, office, product
         unocontext = None
 
         ### Do the LibreOffice component dance
@@ -873,7 +873,7 @@ class Convertor:
                     transformer = Transformer(document)
                     transformer.transform()
                except ImportError:
-                    print('unoconv: transformer not implemented - skipping transform')
+                    print('unoconv: skipping transform as transformer not implemented')
                     pass
 
             ### Update document links
