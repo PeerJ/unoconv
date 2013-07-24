@@ -817,6 +817,9 @@ class Transformer:
             # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/textfield/PageNumber.html
             # http://comments.gmane.org/gmane.comp.openoffice.devel.udk/1693
             # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/NumberingType.html#ARABIC
+
+            self.setPageSize(215.9, 279.4) # us letter
+            self.setMargins(20, 30, 20, 20)
           
             # make sure line numbering is enabled
             self.lineNumbering(True)
@@ -828,8 +831,6 @@ class Transformer:
             # self.removeHeaderFooterLineNumbering()
             
             # following is only necessary if we want to add footer page numbers (perhaps should be done in pdftk though)
-            #self.setPageSize(215.9, 279.4) # us letter
-            #self.setMargins(20, 20, 20, 20)
             #self.addFooterPageNumbering(20, 5)
           
             return
