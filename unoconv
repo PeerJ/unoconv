@@ -710,37 +710,155 @@ unoconv options:
 ''', file=sys.stderr)
 
 class Transformer:
-     def transform(self, document):
-            #cursor = document.Text.createTextCursor()
-            # we want a consistent header/footer for all docs
-            pageStyles = document.StyleFamilies.getByName("PageStyles")
-            defaultStyle = pageStyles.getByName("Default Style")
-            defaultStyle.HeaderIsOn = False
-            defaultStyle.FooterIsOn = True
+     def __init__(self, document):
+          self.document = document
+          self.pageStyles = document.StyleFamilies.getByName("PageStyles")
+          self.defaultStyle = self.pageStyles.getByName("Default Style")
+     
+     def removeHeaderFooter(self):
+            # turn off header and footer for all styles
+            for i in range(0, self.pageStyles.getCount()):
+               pageStyle = self.pageStyles.getByIndex(i)
+               if pageStyle.IsPhysical:
+                    print ("Hiding Headers/Footers for page style: " + pageStyle.DisplayName)
+                    pageStyle.HeaderIsOn = False
+                    pageStyle.FooterIsOn = False
+
+            return
+
+     def setPageSize(self, width, height):
+            for i in range(0, self.pageStyles.getCount()):
+               pageStyle = self.pageStyles.getByIndex(i)
+               if pageStyle.IsPhysical:
+                    print ("Setting page size for page style: " + pageStyle.DisplayName)                    
+                    pageStyle.Width=width * 100 # in 100th mm 
+                    pageStyle.Height=height * 100 # in 100th mm
             
-            defaultStyle.Width=215.9 * 100 # in 100th mm (us letter)
-            defaultStyle.Height=279.4 * 100 # in 100th mm (us letter)
-            defaultStyle.TopMargin = 20 * 100 # in 100th mm (2cm)
-            defaultStyle.LeftMargin = 20 * 100 # in 100th mm (2cm)
-            defaultStyle.RightMargin = 20 * 100 # in 100th mm (2cm)
-            defaultStyle.BottomMargin = 20 * 100 # in 100th mm (2cm)
+            return
+          
+     def setMargins(self, top, left, bottom, right):            
+            for i in range(0, self.pageStyles.getCount()):
+               pageStyle = self.pageStyles.getByIndex(i)
+               if pageStyle.IsPhysical:
+                    print ("Setting page margins for page style: " + pageStyle.DisplayName)
+                    pageStyle.TopMargin = top * 100 # in 100th mm 
+                    pageStyle.BottomMargin = bottom * 100 # in 100th mm
+                    pageStyle.LeftMargin = left * 100 # in 100th mm 
+                    pageStyle.RightMargin = right * 100 # in 100th mm 
             
-            defaultStyle.FooterHeight = 10 * 100 # in 100th mm (1cm)
-                        
+            return
+          
+     def setFooterHeight(self, height, bodyDistance):            
+            for i in range(0, self.pageStyles.getCount()):
+               pageStyle = self.pageStyles.getByIndex(i)
+               if pageStyle.IsPhysical:
+                    print ("Setting page footer height for page style: " + pageStyle.DisplayName)
+                    pageStyle.FooterIsOn = True
+                    pageStyle.FooterHeight = height * 100 # in 100th mm (1cm)
+                    pageStyle.FooterBodyDistance = bodyDistance * 100  # in 100th mm (1cm)
+                    pageStyle.FooterDynamicSpacing = False
+                    pageStyle.FooterIsDynamicHeight = False
+                    pageStyle.FooterIsOn = False
+
+            return
+
+     def lineNumbering(self, on):
+          print ("Setting Line Numbering for document")
+          self.document.LineNumberingProperties.IsOn = on
+          return
+     
+     def removeHeaderFooterLineNumbering(self):
+            print ("Removing Header and Footer line numbering")
+            paragraphStyles = self.document.StyleFamilies.getByName("ParagraphStyles")
+            footer = paragraphStyles.getByName("Footer")
+            footer.ParaLineNumberCount = False
+            footer = paragraphStyles.getByName("Footer Left")
+            footer.ParaLineNumberCount = False
+            footer = paragraphStyles.getByName("Footer Right")
+            footer.ParaLineNumberCount = False
+            header = paragraphStyles.getByName("Header")
+            header.ParaLineNumberCount = False
+            header = paragraphStyles.getByName("Header Left")
+            header.ParaLineNumberCount = False
+            header = paragraphStyles.getByName("Header Right")
+            header.ParaLineNumberCount = False
+
+            return
+     
+     def addFooterPageNumbering(self, height, bodyDistance):
+            pageNumber = self.document.createInstance("com.sun.star.text.textfield.PageNumber")
+            # arabic
+            pageNumber.NumberingType = 4
+            # set to current page
+            pageNumber.SubType = 1
+            
+            # need to set for all page styles
+            self.setFooterHeight(height, bodyDistance)
+
+            # footer needs to be on in order to create cursor
+            self.defaultStyle.FooterIsOn = True
+            
+            footerCursor = self.defaultStyle.FooterText.createTextCursor()
+            footerCursor.ParaLineNumberCount = False
+            footerCursor.ParaAdjust = 3 # CENTER
+            
+            self.defaultStyle.FooterText.Text.insertTextContent(footerCursor, pageNumber, True)
+            return
+     
+     
+     def transform(self):
             # http://www.openoffice.org/api/docs/common/ref/com/sun/star/text/textfield/PageNumber.html
             # http://comments.gmane.org/gmane.comp.openoffice.devel.udk/1693
             # http://www.openoffice.org/api/docs/common/ref/com/sun/star/style/NumberingType.html#ARABIC
-            pageNumber = document.createInstance("com.sun.star.text.textfield.PageNumber")            
-            pageNumber.NumberingType = 4
-            pageNumber.SubType = 1
-            footerCursor = defaultStyle.FooterText.createTextCursor()
-            defaultStyle.FooterText.Text.insertTextContent(footerCursor, pageNumber, True)
-            footerCursor.ParaAdjust = 3 # CENTER
-            footerCursor.ParaLineNumberCount = False
+          
+            # make sure line numbering is enabled
+            self.lineNumbering(True)
+            
+            # remove all headers/footers
+            self.removeHeaderFooter()
+            
+            # not necessary at the momemnt, but if we decide to allow headers/footers, we would want to turn off line numbering there
+            # self.removeHeaderFooterLineNumbering()
+            
+            # following is only necessary if we want to add footer page numbers (perhaps should be done in pdftk though)
+            #self.setPageSize(215.9, 279.4) # us letter
+            #self.setMargins(20, 20, 20, 20)
+            #self.addFooterPageNumbering(20, 5)
+          
+            return
+          
+     def comments(self):
+     
+            #footer.ParaLineNumberCount = False
+            #for i in range(0, paragraphStyles.getCount() - 1):
+               #paragraphStyle = paragraphStyles.getByIndex(i)
+               #print (paragraphStyle.DisplayName)
+               #if paragraphStyle.IsPhysical:
+                    #paragraphStyle.HeaderIsOn = False
+                    #paragraphStyle.FooterIsOn = False
+            
+            #defaultStyle = pageStyles.getByName("Default Style")
+            #defaultStyle.FooterHeight = 10 * 100 # in 100th mm (1cm)
+                        
+            #pageStyle.FooterText.Text.removeTextContent(pageNumber)
+            #pageStyle.FooterTextLeft.Text.removeTextContent(pageNumber)
+                    #pageStyle.FooterTextRight.Text.removeTextContent(pageNumber)
+            #footerCursor = defaultStyle.FooterText.createTextCursor()
+            #footerCursor.ParaLineNumberCount = False
+            #footerCursor.ParaAdjust = 3 # CENTER
+            #cursor = document.Text.createTextCursor()
+            
+            #defaultStyle.FooterText.Text.insertTextContent(footerCursor, pageNumber, True)
+          
 
-            # turn on line numbering
-            document.LineNumberingProperties.IsOn = True
-
+            #pageNumber = document.createInstance("com.sun.star.text.textfield.PageNumber")            
+            #pageNumber.NumberingType = 4
+            #pageNumber.SubType = 1
+            #footerCursor.gotoStartOfParagraph(False)
+            #footerCursor.gotoEndOfParagraph(True)
+            #print(footerCursor.getString())
+            #footerCursor.setString("")
+            #defaultStyle.FooterText.Text.insertTextContent(footerCursor, '', True)
             #paragraphStyles = document.StyleFamilies.getByName("ParagraphStyles");
             #defaultStyle = paragraphStyles.getByName("Default Style");
             #
@@ -756,11 +874,9 @@ class Transformer:
             return
           
 class Convertor:
-    def __init__(self, transformer):
+    def __init__(self):
         global exitcode, ooproc, office, product, transfomer
         unocontext = None
-
-        self.transformer = transformer
 
         ### Do the LibreOffice component dance
         self.context = uno.getComponentContext()
@@ -902,7 +1018,6 @@ class Convertor:
             if not document:
                 raise UnoException("The document '%s' could not be opened." % inputurl, None)
 
-            #document.StyleFamilies.PageStyles.Header.ParaStyleConditions
             ### Import style template
             phase = "import-style"
             if op.template:
@@ -917,7 +1032,8 @@ class Convertor:
 
             phase = "transform"
             if op.transformer:
-               self.transformer.transform(document)
+               transformer = Transformer(document)
+               transformer.transform()
 
             ### Update document links
             phase = "update-links"
@@ -1142,7 +1258,7 @@ def main():
             listener = Listener()
 
         if op.filenames:
-            convertor = Convertor(Transformer())
+            convertor = Convertor()
             for inputfn in op.filenames:
                 convertor.convert(inputfn)
 
