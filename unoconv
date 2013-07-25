@@ -874,7 +874,6 @@ class Convertor:
                     transformer.transform()
                except ImportError:
                     print('unoconv: skipping transform as transformer not implemented')
-                    pass
 
             ### Update document links
             phase = "update-links"
