@@ -256,7 +256,8 @@ def python_switch(office):
                                    realpath(office.pythonhome, 'lib', 'lib-dynload') + os.pathsep + \
                                    realpath(office.pythonhome, 'lib', 'lib-tk') + os.pathsep + \
                                    realpath(office.pythonhome, 'lib', 'site-packages') + os.pathsep + \
-                                   office.unopath
+                                   office.unopath + os.pathsep + \
+                                   os.environ['PYTHONPATH']
 
     os.environ['UNO_PATH'] = office.unopath
 
